@@ -45,7 +45,7 @@ public class CustomImageSelectAdapter extends CustomGenericAdapter<Image> {
         viewHolder.view.getLayoutParams().width = size;
         viewHolder.view.getLayoutParams().height = size;
 
-        if (arrayList.get(position).isSelected) {
+        if (position < arrayList.size() && arrayList.get(position).isSelected) {
             viewHolder.view.setAlpha(0.5f);
             ((FrameLayout) convertView).setForeground(context.getResources().getDrawable(R.drawable.ic_done_white));
 
