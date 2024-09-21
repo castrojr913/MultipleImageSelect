@@ -7,11 +7,15 @@ import android.database.ContentObserver;
 import android.database.Cursor;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.Looper;
 import android.os.Message;
 import android.os.Process;
 import android.provider.MediaStore;
+
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.widget.Toolbar;
+
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.ActionMode;
@@ -20,7 +24,6 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.WindowManager;
-import android.widget.AdapterView;
 import android.widget.GridView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
@@ -28,51 +31,46 @@ import android.widget.Toast;
 
 import com.darsh.multipleimageselect.R;
 import com.darsh.multipleimageselect.adapters.CustomImageSelectAdapter;
+import com.darsh.multipleimageselect.helpers.BackgroundHelper;
 import com.darsh.multipleimageselect.helpers.Constants;
 import com.darsh.multipleimageselect.models.Image;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.Locale;
 
 /**
  * Created by Darshan on 4/18/2015.
  */
 public class ImageSelectActivity extends HelperActivity {
+
     private ArrayList<Image> images;
     private String album;
-
     private TextView errorDisplay;
-
     private ProgressBar progressBar;
     private GridView gridView;
     private CustomImageSelectAdapter adapter;
-
     private ActionBar actionBar;
-
     private ActionMode actionMode;
     private int countSelected;
-
     private ContentObserver observer;
     private Handler handler;
-    private Thread thread;
 
-    private final String[] projection = new String[]{ MediaStore.Images.Media._ID, MediaStore.Images.Media.DISPLAY_NAME, MediaStore.Images.Media.DATA };
+    private final String[] projection = new String[]{MediaStore.Images.Media._ID, MediaStore.Images.Media.DISPLAY_NAME, MediaStore.Images.Media.DATA};
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_image_select);
         setView(findViewById(R.id.layout_image_select));
-
-        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+        Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
         actionBar = getSupportActionBar();
         if (actionBar != null) {
             actionBar.setDisplayHomeAsUpEnabled(true);
             actionBar.setHomeAsUpIndicator(R.drawable.ic_arrow_back);
-
             actionBar.setDisplayShowTitleEnabled(true);
             actionBar.setTitle(R.string.image_view);
         }
@@ -80,37 +78,28 @@ public class ImageSelectActivity extends HelperActivity {
         Intent intent = getIntent();
         if (intent == null) {
             finish();
+            return;
         }
+
         album = intent.getStringExtra(Constants.INTENT_EXTRA_ALBUM);
-
-        errorDisplay = (TextView) findViewById(R.id.text_view_error);
+        errorDisplay = findViewById(R.id.text_view_error);
         errorDisplay.setVisibility(View.INVISIBLE);
-
-        progressBar = (ProgressBar) findViewById(R.id.progress_bar_image_select);
-        gridView = (GridView) findViewById(R.id.grid_view_image_select);
-        gridView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                if (actionMode == null) {
-                    actionMode = ImageSelectActivity.this.startActionMode(callback);
-                }
-                toggleSelection(position);
-                actionMode.setTitle(countSelected + " " + getString(R.string.selected));
-
-                if (countSelected == 0) {
-                    actionMode.finish();
-                }
-            }
+        progressBar = findViewById(R.id.progress_bar_image_select);
+        gridView = findViewById(R.id.grid_view_image_select);
+        gridView.setOnItemClickListener((parent, view, position, id) -> {
+            if (actionMode == null) actionMode = ImageSelectActivity.this.startActionMode(callback);
+            toggleSelection(position);
+            actionMode.setTitle(String.format(Locale.getDefault(), "%d %s", countSelected, getString(R.string.selected)));
+            if (countSelected == 0) actionMode.finish();
         });
     }
 
     @Override
     protected void onStart() {
         super.onStart();
-
-        handler = new Handler() {
+        handler = new Handler(Looper.getMainLooper()) {
             @Override
-            public void handleMessage(Message msg) {
+            public void handleMessage(@NonNull Message msg) {
                 switch (msg.what) {
                     case Constants.PERMISSION_GRANTED: {
                         loadImages();
@@ -124,7 +113,7 @@ public class ImageSelectActivity extends HelperActivity {
                     }
 
                     case Constants.FETCH_COMPLETED: {
-                        /*X
+                        /*
                         If adapter is null, this implies that the loaded images will be shown
                         for the first time, hence send FETCH_COMPLETED message.
                         However, if adapter has been initialised, this thread was run either
@@ -133,11 +122,9 @@ public class ImageSelectActivity extends HelperActivity {
                         if (adapter == null) {
                             adapter = new CustomImageSelectAdapter(getApplicationContext(), images);
                             gridView.setAdapter(adapter);
-
                             progressBar.setVisibility(View.INVISIBLE);
                             gridView.setVisibility(View.VISIBLE);
                             orientationBasedUI(getResources().getConfiguration().orientation);
-
                         } else {
                             adapter.notifyDataSetChanged();
                             /*
@@ -146,7 +133,7 @@ public class ImageSelectActivity extends HelperActivity {
                              */
                             if (actionMode != null) {
                                 countSelected = msg.arg1;
-                                actionMode.setTitle(countSelected + " " + getString(R.string.selected));
+                                actionMode.setTitle(String.format(Locale.getDefault(), "%d %s", countSelected, getString(R.string.selected)));
                             }
                         }
                         break;
@@ -171,7 +158,6 @@ public class ImageSelectActivity extends HelperActivity {
             }
         };
         getContentResolver().registerContentObserver(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, false, observer);
-
         checkPermission();
     }
 
@@ -179,7 +165,7 @@ public class ImageSelectActivity extends HelperActivity {
     protected void onStop() {
         super.onStop();
 
-        stopThread();
+        //stopThread();
 
         getContentResolver().unregisterContentObserver(observer);
         observer = null;
@@ -205,7 +191,7 @@ public class ImageSelectActivity extends HelperActivity {
     }
 
     @Override
-    public void onConfigurationChanged(Configuration newConfig) {
+    public void onConfigurationChanged(@NonNull Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
         orientationBasedUI(newConfig.orientation);
     }
@@ -224,27 +210,20 @@ public class ImageSelectActivity extends HelperActivity {
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        switch (item.getItemId()) {
-            case android.R.id.home: {
-                onBackPressed();
-                return true;
-            }
-
-            default: {
-                return false;
-            }
+        if (item.getItemId() == android.R.id.home) {
+            onBackPressed();
+            return true;
         }
+        return false;
     }
 
-    private ActionMode.Callback callback = new ActionMode.Callback() {
+    private final ActionMode.Callback callback = new ActionMode.Callback() {
         @Override
         public boolean onCreateActionMode(ActionMode mode, Menu menu) {
             MenuInflater menuInflater = mode.getMenuInflater();
             menuInflater.inflate(R.menu.menu_contextual_action_bar, menu);
-
             actionMode = mode;
             countSelected = 0;
-
             return true;
         }
 
@@ -254,7 +233,8 @@ public class ImageSelectActivity extends HelperActivity {
         }
 
         @Override
-        public boolean onActionItemClicked(ActionMode mode, MenuItem item) {int i = item.getItemId();
+        public boolean onActionItemClicked(ActionMode mode, MenuItem item) {
+            int i = item.getItemId();
             if (i == R.id.menu_item_add_image) {
                 sendIntent();
                 return true;
@@ -273,11 +253,9 @@ public class ImageSelectActivity extends HelperActivity {
 
     private void toggleSelection(int position) {
         if (!images.get(position).isSelected && countSelected >= Constants.limit) {
-            Toast.makeText(
-                    getApplicationContext(),
+            Toast.makeText(getApplicationContext(),
                     String.format(getString(R.string.limit_exceeded), Constants.limit),
-                    Toast.LENGTH_SHORT)
-                    .show();
+                    Toast.LENGTH_SHORT).show();
             return;
         }
 
@@ -316,7 +294,7 @@ public class ImageSelectActivity extends HelperActivity {
     }
 
     private void loadImages() {
-        startThread(new ImageLoaderRunnable());
+        BackgroundHelper.execute(new ImageLoaderRunnable());
     }
 
     private class ImageLoaderRunnable implements Runnable {
@@ -367,10 +345,13 @@ public class ImageSelectActivity extends HelperActivity {
                         if (Thread.interrupted()) {
                             return;
                         }
+                        final int idIndex = cursor.getColumnIndex(projection[0]);
+                        final int nameIndex = cursor.getColumnIndex(projection[1]);
+                        final int pathIndex = cursor.getColumnIndex(projection[2]);
+                        final long id = idIndex > -1 ? cursor.getLong(idIndex) : 0;
+                        final String name = nameIndex > -1 ? cursor.getString(nameIndex) : "";
+                        final String path = pathIndex > -1 ? cursor.getString(pathIndex) : "";
 
-                        long id = cursor.getLong(cursor.getColumnIndex(projection[0]));
-                        String name = cursor.getString(cursor.getColumnIndex(projection[1]));
-                        String path = cursor.getString(cursor.getColumnIndex(projection[2]));
                         boolean isSelected = selectedImages.contains(id);
                         if (isSelected) {
                             tempCountSelected++;
@@ -393,27 +374,9 @@ public class ImageSelectActivity extends HelperActivity {
 
                 sendMessage(Constants.FETCH_COMPLETED, tempCountSelected);
             } catch (Exception e) {
-                Log.e("ImageSelectActivity", e.getMessage());
+                final String err = e.getMessage();
+                Log.e("ImageSelectActivity", err != null ? e.getMessage() : "null");
             }
-        }
-    }
-
-    private void startThread(Runnable runnable) {
-        stopThread();
-        thread = new Thread(runnable);
-        thread.start();
-    }
-
-    private void stopThread() {
-        if (thread == null || !thread.isAlive()) {
-            return;
-        }
-
-        thread.interrupt();
-        try {
-            thread.join();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
         }
     }
 
@@ -425,7 +388,6 @@ public class ImageSelectActivity extends HelperActivity {
         if (handler == null) {
             return;
         }
-
         Message message = handler.obtainMessage();
         message.what = what;
         message.arg1 = arg1;
@@ -442,4 +404,5 @@ public class ImageSelectActivity extends HelperActivity {
         progressBar.setVisibility(View.INVISIBLE);
         gridView.setVisibility(View.INVISIBLE);
     }
+
 }
