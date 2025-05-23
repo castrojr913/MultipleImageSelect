@@ -5,6 +5,8 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
+import android.os.Handler;
+import android.os.Looper;
 import android.provider.Settings;
 import android.view.View;
 
@@ -12,10 +14,14 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.core.os.HandlerCompat;
 
 import com.darsh.multipleimageselect.R;
 import com.darsh.multipleimageselect.helpers.Constants;
 import com.google.android.material.snackbar.Snackbar;
+
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * Created by darshan on 26/9/16.
@@ -23,6 +29,9 @@ import com.google.android.material.snackbar.Snackbar;
 public class HelperActivity extends AppCompatActivity {
 
     // Manifest.permission.WRITE_EXTERNAL_STORAGE is deprecated since sdkVersion >= 33
+
+    protected final ExecutorService bgExecutor = Executors.newSingleThreadExecutor();
+    protected final Handler uiHandler = HandlerCompat.createAsync(Looper.getMainLooper());
 
     protected View view;
     private final int maxLines = 4;
@@ -41,7 +50,7 @@ public class HelperActivity extends AppCompatActivity {
         }
     }
 
-    private boolean checkPermissions() {
+    protected boolean checkPermissions() {
         return Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ?
                 ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED :
                 ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES) == PackageManager.PERMISSION_GRANTED &&
@@ -78,8 +87,6 @@ public class HelperActivity extends AppCompatActivity {
                     }
                 });
 
-        /*((TextView) snackbar.getView()
-                .findViewById(android.support.design.R.id.snackbar_text)).setMaxLines(maxLines);*/
         snackbar.show();
     }
 
@@ -116,7 +123,6 @@ public class HelperActivity extends AppCompatActivity {
                 || grantResults.length == 0
                 || grantResults[0] == PackageManager.PERMISSION_DENIED) {
             permissionDenied();
-
         } else {
             permissionGranted();
         }
