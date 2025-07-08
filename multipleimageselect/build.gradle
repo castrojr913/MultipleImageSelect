@@ -1,4 +1,10 @@
-apply plugin: 'com.android.library'
+plugins {
+    id 'com.android.library'
+    id 'maven-publish'
+}
+
+group = 'com.github.castrojr913'
+version = project.findProperty('version') ?: '1.0.9'
 
 android {
     compileSdk 35
@@ -6,14 +12,38 @@ android {
     defaultConfig {
         minSdkVersion 26
         targetSdkVersion 35
-        versionCode 5
-        versionName "1.0.8"
+        versionCode 6
+        versionName "1.0.9"
     }
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    lint {
+        abortOnError false
+        checkReleaseBuilds false
+    }
+}
+
+afterEvaluate {
+    publishing {
+        publications {
+            release(MavenPublication) {
+                groupId = group
+                artifactId = 'multipleimageselect'
+                version = version
+                artifact("$buildDir/outputs/aar/${project.name}-release.aar")
+            }
+        }
+    }
+    tasks.named("publishReleasePublicationToMavenLocal") {
+        dependsOn tasks.named("bundleReleaseAar")
     }
 }
 
