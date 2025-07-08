@@ -9,7 +9,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.res.Configuration;
 import android.database.ContentObserver;
-import android.database.Cursor;
+import android. database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Process;
@@ -20,7 +20,6 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 
 import androidx.appcompat.app.ActionBar;
-import androidx.appcompat.widget.Toolbar;
 
 import android.util.DisplayMetrics;
 import android.view.MenuItem;
@@ -42,7 +41,7 @@ import java.util.HashSet;
 /**
  * Created by Darshan on 4/14/2015.
  */
-public class AlbumSelectActivity extends HelperActivity implements OnFileReadListener {
+public class AlbumSelectActivity extends BaseEdgeToEdgeActivity implements OnFileReadListener {
 
     private final String[] projection = new String[]{BUCKET_ID, BUCKET_DISPLAY_NAME, DATA};
 
@@ -61,8 +60,8 @@ public class AlbumSelectActivity extends HelperActivity implements OnFileReadLis
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_album_select);
         setView(findViewById(R.id.layout_album_select));
-        Toolbar toolbar = findViewById(R.id.toolbar);
-        setSupportActionBar(toolbar);
+        applySystemBarInsets(findViewById(R.id.root_view));
+        setSupportActionBar(findViewById(R.id.toolbar));
         actionBar = getSupportActionBar();
         if (actionBar != null) {
             actionBar.setDisplayHomeAsUpEnabled(true);

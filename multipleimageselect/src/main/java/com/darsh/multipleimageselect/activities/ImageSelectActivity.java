@@ -15,7 +15,6 @@ import android.provider.MediaStore;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBar;
-import androidx.appcompat.widget.Toolbar;
 
 import android.util.DisplayMetrics;
 import android.util.Log;
@@ -43,7 +42,7 @@ import java.util.Locale;
 /**
  * Created by Darshan on 4/18/2015.
  */
-public class ImageSelectActivity extends HelperActivity implements OnFileReadListener {
+public class ImageSelectActivity extends BaseEdgeToEdgeActivity implements OnFileReadListener {
 
     private final String[] projection = new String[]{_ID, DISPLAY_NAME, DATA};
 
@@ -64,8 +63,8 @@ public class ImageSelectActivity extends HelperActivity implements OnFileReadLis
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_image_select);
         setView(findViewById(R.id.layout_image_select));
-        Toolbar toolbar = findViewById(R.id.toolbar);
-        setSupportActionBar(toolbar);
+        applySystemBarInsets(findViewById(R.id.root_view));
+        setSupportActionBar(findViewById(R.id.toolbar));
         actionBar = getSupportActionBar();
         if (actionBar != null) {
             actionBar.setDisplayHomeAsUpEnabled(true);
