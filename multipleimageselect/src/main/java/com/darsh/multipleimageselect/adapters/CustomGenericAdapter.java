@@ -17,18 +17,19 @@ public abstract class CustomGenericAdapter<T> extends BaseAdapter {
     protected int size;
 
     public CustomGenericAdapter(Context context, ArrayList<T> arrayList) {
-        this.arrayList = arrayList;
+        this.arrayList = arrayList == null ? new ArrayList<>() : arrayList;
         this.context = context;
         this.layoutInflater = LayoutInflater.from(this.context);
     }
 
     @Override
     public int getCount() {
-        return arrayList.size();
+        return arrayList != null ? arrayList.size() : 0;
     }
 
+    @Override
     public T getItem(int position) {
-        return arrayList.get(position);
+        return arrayList != null ? arrayList.get(position) : null;
     }
 
     @Override
