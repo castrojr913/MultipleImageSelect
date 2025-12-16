@@ -16,7 +16,8 @@ public class Constants {
 
     /**
      * Request code for permission has to be < (1 << 8)
-     * Otherwise throws java.lang.IllegalArgumentException: Can only use lower 8 bits for requestCode
+     * Otherwise throws java.lang.IllegalArgumentException: Can only use lower 8
+     * bits for requestCode
      */
     public static final int PERMISSION_REQUEST_READ_EXTERNAL_STORAGE = 23;
 
@@ -25,6 +26,11 @@ public class Constants {
     public static final String INTENT_EXTRA_LIMIT = "limit";
     public static final int DEFAULT_LIMIT = 10;
 
-    //Maximum number of images that can be selected at a time
+    public static final String INTENT_EXTRA_MODE = "mode";
+    public static final int MODE_IMAGE = 0;
+    public static final int MODE_VIDEO = 1;
+    public static int mode;
+
+    // Maximum number of images that can be selected at a time
     public static int limit;
 }

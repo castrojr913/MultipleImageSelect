@@ -9,7 +9,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.res.Configuration;
 import android.database.ContentObserver;
-import android. database.Cursor;
+import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Process;
@@ -43,7 +43,7 @@ import java.util.HashSet;
  */
 public class AlbumSelectActivity extends BaseEdgeToEdgeActivity implements OnFileReadListener {
 
-    private final String[] projection = new String[]{BUCKET_ID, BUCKET_DISPLAY_NAME, DATA};
+    private final String[] projection = new String[] { BUCKET_ID, BUCKET_DISPLAY_NAME, DATA };
 
     private ArrayList<Album> albums;
     private TextView errorDisplay;
@@ -53,7 +53,6 @@ public class AlbumSelectActivity extends BaseEdgeToEdgeActivity implements OnFil
     private ActionBar actionBar;
     private ContentObserver observer;
     private ActivityResultLauncher<Intent> intentLauncher;
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -67,11 +66,22 @@ public class AlbumSelectActivity extends BaseEdgeToEdgeActivity implements OnFil
             actionBar.setDisplayHomeAsUpEnabled(true);
             actionBar.setHomeAsUpIndicator(R.drawable.ic_arrow_back);
             actionBar.setDisplayShowTitleEnabled(true);
-            actionBar.setTitle(R.string.album_view);
+            Intent intent = getIntent();
+            int mode = intent != null ? intent.getIntExtra(Constants.INTENT_EXTRA_MODE, Constants.MODE_IMAGE)
+                    : Constants.MODE_IMAGE;
+            if (mode == Constants.MODE_VIDEO) {
+                actionBar.setTitle(R.string.album_select_video);
+            } else {
+                actionBar.setTitle(R.string.album_view);
+            }
         }
         Intent intent = getIntent();
-        if (intent == null) finish();
-        Constants.limit = intent != null ? intent.getIntExtra(Constants.INTENT_EXTRA_LIMIT, Constants.DEFAULT_LIMIT) : 0;
+        if (intent == null)
+            finish();
+        Constants.limit = intent != null ? intent.getIntExtra(Constants.INTENT_EXTRA_LIMIT, Constants.DEFAULT_LIMIT)
+                : 0;
+        Constants.mode = intent != null ? intent.getIntExtra(Constants.INTENT_EXTRA_MODE, Constants.MODE_IMAGE)
+                : Constants.MODE_IMAGE;
         errorDisplay = findViewById(R.id.text_view_error);
         errorDisplay.setVisibility(View.INVISIBLE);
         progressBar = findViewById(R.id.progress_bar_album_select);
@@ -88,6 +98,7 @@ public class AlbumSelectActivity extends BaseEdgeToEdgeActivity implements OnFil
         gridView.setOnItemClickListener((parent, view, position, id) -> {
             Intent intent1 = new Intent(getApplicationContext(), ImageSelectActivity.class);
             intent1.putExtra(Constants.INTENT_EXTRA_ALBUM, albums.get(position).name);
+            intent1.putExtra(Constants.INTENT_EXTRA_MODE, Constants.mode);
             intentLauncher.launch(intent1);
         });
     }
@@ -101,7 +112,10 @@ public class AlbumSelectActivity extends BaseEdgeToEdgeActivity implements OnFil
                 loadAlbums();
             }
         };
-        getContentResolver().registerContentObserver(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, false, observer);
+        getContentResolver().registerContentObserver(
+                Constants.mode == Constants.MODE_VIDEO ? MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+                        : MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                false, observer);
         checkPermission();
     }
 
@@ -115,9 +129,11 @@ public class AlbumSelectActivity extends BaseEdgeToEdgeActivity implements OnFil
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if (actionBar != null) actionBar.setHomeAsUpIndicator(null);
+        if (actionBar != null)
+            actionBar.setHomeAsUpIndicator(null);
         albums = null;
-        if (adapter != null) adapter.releaseResources();
+        if (adapter != null)
+            adapter.releaseResources();
         gridView.setOnItemClickListener(null);
     }
 
@@ -128,12 +144,14 @@ public class AlbumSelectActivity extends BaseEdgeToEdgeActivity implements OnFil
     }
 
     private void orientationBasedUI(int orientation) {
-        final WindowManager windowManager = (WindowManager) getApplicationContext().getSystemService(Context.WINDOW_SERVICE);
+        final WindowManager windowManager = (WindowManager) getApplicationContext()
+                .getSystemService(Context.WINDOW_SERVICE);
         final DisplayMetrics metrics = new DisplayMetrics();
         windowManager.getDefaultDisplay().getMetrics(metrics);
 
         if (adapter != null) {
-            int size = orientation == Configuration.ORIENTATION_PORTRAIT ? metrics.widthPixels / 2 : metrics.widthPixels / 4;
+            int size = orientation == Configuration.ORIENTATION_PORTRAIT ? metrics.widthPixels / 2
+                    : metrics.widthPixels / 4;
             adapter.setLayoutParams(size);
         }
         gridView.setNumColumns(orientation == Configuration.ORIENTATION_PORTRAIT ? 2 : 4);
@@ -210,8 +228,11 @@ public class AlbumSelectActivity extends BaseEdgeToEdgeActivity implements OnFil
         @Override
         public void run() {
             Process.setThreadPriority(Process.THREAD_PRIORITY_BACKGROUND);
-            if (adapter == null) onFetchStarted();
-            Cursor cursor = getApplicationContext().getContentResolver().query(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, projection,
+            if (adapter == null)
+                onFetchStarted();
+            Uri contentUri = Constants.mode == Constants.MODE_VIDEO ? MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+                    : MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
+            Cursor cursor = getApplicationContext().getContentResolver().query(contentUri, projection,
                     null, null, MediaStore.Images.Media.DATE_ADDED);
             if (cursor == null) {
                 onError();
@@ -222,16 +243,17 @@ public class AlbumSelectActivity extends BaseEdgeToEdgeActivity implements OnFil
             File file;
             if (cursor.moveToLast()) {
                 do {
-                    if (Thread.interrupted()) return;
+                    if (Thread.interrupted())
+                        return;
                     long albumId = cursor.getLong(cursor.getColumnIndex(projection[0]));
                     String album = cursor.getString(cursor.getColumnIndex(projection[1]));
                     String image = cursor.getString(cursor.getColumnIndex(projection[2]));
                     if (!albumSet.contains(albumId)) {
                         /*
-                        It may happen that some image file paths are still present in cache,
-                        though image file does not exist. These last as long as media
-                        scanner is not run again. To avoid get such image file paths, check
-                        if image file exists.
+                         * It may happen that some image file paths are still present in cache,
+                         * though image file does not exist. These last as long as media
+                         * scanner is not run again. To avoid get such image file paths, check
+                         * if image file exists.
                          */
                         file = new File(image);
                         if (file.exists()) {
@@ -242,7 +264,8 @@ public class AlbumSelectActivity extends BaseEdgeToEdgeActivity implements OnFil
                 } while (cursor.moveToPrevious());
             }
             cursor.close();
-            if (albums == null) albums = new ArrayList<>();
+            if (albums == null)
+                albums = new ArrayList<>();
             albums.clear();
             albums.addAll(temp);
             onFetchCompleted(0);

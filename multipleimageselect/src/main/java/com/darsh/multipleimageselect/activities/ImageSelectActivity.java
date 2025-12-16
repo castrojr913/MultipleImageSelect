@@ -12,6 +12,7 @@ import android.database.Cursor;
 import android.os.Bundle;
 import android.os.Process;
 import android.provider.MediaStore;
+import android.net.Uri;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBar;
@@ -44,7 +45,7 @@ import java.util.Locale;
  */
 public class ImageSelectActivity extends BaseEdgeToEdgeActivity implements OnFileReadListener {
 
-    private final String[] projection = new String[]{_ID, DISPLAY_NAME, DATA};
+    private final String[] projection = new String[] { _ID, DISPLAY_NAME, DATA };
 
     private ArrayList<Image> images;
     private String album;
@@ -56,7 +57,6 @@ public class ImageSelectActivity extends BaseEdgeToEdgeActivity implements OnFil
     private ActionMode actionMode;
     private int countSelected;
     private ContentObserver observer;
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -70,7 +70,11 @@ public class ImageSelectActivity extends BaseEdgeToEdgeActivity implements OnFil
             actionBar.setDisplayHomeAsUpEnabled(true);
             actionBar.setHomeAsUpIndicator(R.drawable.ic_arrow_back);
             actionBar.setDisplayShowTitleEnabled(true);
-            actionBar.setTitle(R.string.image_view);
+            if (Constants.mode == Constants.MODE_VIDEO) {
+                actionBar.setTitle(R.string.image_view_video);
+            } else {
+                actionBar.setTitle(R.string.image_view);
+            }
         }
         Intent intent = getIntent();
         if (intent == null) {
@@ -78,17 +82,21 @@ public class ImageSelectActivity extends BaseEdgeToEdgeActivity implements OnFil
             return;
         }
         album = intent.getStringExtra(Constants.INTENT_EXTRA_ALBUM);
+        Constants.mode = intent.getIntExtra(Constants.INTENT_EXTRA_MODE, Constants.MODE_IMAGE);
         errorDisplay = findViewById(R.id.text_view_error);
         errorDisplay.setVisibility(View.INVISIBLE);
         progressBar = findViewById(R.id.progress_bar_image_select);
         gridView = findViewById(R.id.grid_view_image_select);
 
-        //Listeners
+        // Listeners
         gridView.setOnItemClickListener((parent, view, position, id) -> {
-            if (actionMode == null) actionMode = ImageSelectActivity.this.startActionMode(callback);
+            if (actionMode == null)
+                actionMode = ImageSelectActivity.this.startActionMode(callback);
             toggleSelection(position);
-            actionMode.setTitle(String.format(Locale.getDefault(), "%d %s", countSelected, getString(R.string.selected)));
-            if (countSelected == 0) actionMode.finish();
+            actionMode
+                    .setTitle(String.format(Locale.getDefault(), "%d %s", countSelected, getString(R.string.selected)));
+            if (countSelected == 0)
+                actionMode.finish();
         });
     }
 
@@ -101,7 +109,10 @@ public class ImageSelectActivity extends BaseEdgeToEdgeActivity implements OnFil
                 loadImages();
             }
         };
-        getContentResolver().registerContentObserver(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, false, observer);
+        getContentResolver().registerContentObserver(
+                Constants.mode == Constants.MODE_VIDEO ? MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+                        : MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                false, observer);
         checkPermission();
     }
 
@@ -115,9 +126,11 @@ public class ImageSelectActivity extends BaseEdgeToEdgeActivity implements OnFil
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if (actionBar != null) actionBar.setHomeAsUpIndicator(null);
+        if (actionBar != null)
+            actionBar.setHomeAsUpIndicator(null);
         images = null;
-        if (adapter != null) adapter.releaseResources();
+        if (adapter != null)
+            adapter.releaseResources();
         gridView.setOnItemClickListener(null);
     }
 
@@ -128,11 +141,13 @@ public class ImageSelectActivity extends BaseEdgeToEdgeActivity implements OnFil
     }
 
     private void orientationBasedUI(int orientation) {
-        final WindowManager windowManager = (WindowManager) getApplicationContext().getSystemService(Context.WINDOW_SERVICE);
+        final WindowManager windowManager = (WindowManager) getApplicationContext()
+                .getSystemService(Context.WINDOW_SERVICE);
         final DisplayMetrics metrics = new DisplayMetrics();
         windowManager.getDefaultDisplay().getMetrics(metrics);
         if (adapter != null) {
-            int size = orientation == Configuration.ORIENTATION_PORTRAIT ? metrics.widthPixels / 3 : metrics.widthPixels / 5;
+            int size = orientation == Configuration.ORIENTATION_PORTRAIT ? metrics.widthPixels / 3
+                    : metrics.widthPixels / 5;
             adapter.setLayoutParams(size);
         }
         gridView.setNumColumns(orientation == Configuration.ORIENTATION_PORTRAIT ? 3 : 5);
@@ -163,12 +178,12 @@ public class ImageSelectActivity extends BaseEdgeToEdgeActivity implements OnFil
     @Override
     public void onFetchCompleted(int value) {
         uiHandler.post(() -> {
-                /*
-                If adapter is null, this implies that the loaded images will be shown
-                for the first time, hence send FETCH_COMPLETED message.
-                However, if adapter has been initialised, this thread was run either
-                due to the activity being restarted or content being changed.
-                 */
+            /*
+             * If adapter is null, this implies that the loaded images will be shown
+             * for the first time, hence send FETCH_COMPLETED message.
+             * However, if adapter has been initialised, this thread was run either
+             * due to the activity being restarted or content being changed.
+             */
             if (adapter == null) {
                 adapter = new CustomImageSelectAdapter(getApplicationContext(), images);
                 gridView.setAdapter(adapter);
@@ -178,12 +193,13 @@ public class ImageSelectActivity extends BaseEdgeToEdgeActivity implements OnFil
             } else {
                 adapter.notifyDataSetChanged();
                 /*
-                Some selected images may have been deleted
-                hence update action mode title
+                 * Some selected images may have been deleted
+                 * hence update action mode title
                  */
                 if (actionMode != null) {
                     countSelected = value;
-                    actionMode.setTitle(String.format(Locale.getDefault(), "%d %s", countSelected, getString(R.string.selected)));
+                    actionMode.setTitle(
+                            String.format(Locale.getDefault(), "%d %s", countSelected, getString(R.string.selected)));
                 }
             }
         });
@@ -224,7 +240,8 @@ public class ImageSelectActivity extends BaseEdgeToEdgeActivity implements OnFil
 
         @Override
         public void onDestroyActionMode(ActionMode mode) {
-            if (countSelected > 0) deselectAll();
+            if (countSelected > 0)
+                deselectAll();
             actionMode = null;
         }
     };
@@ -279,11 +296,12 @@ public class ImageSelectActivity extends BaseEdgeToEdgeActivity implements OnFil
         public void run() {
             android.os.Process.setThreadPriority(Process.THREAD_PRIORITY_BACKGROUND);
             /*
-            If the adapter is null, this is first time this activity's view is
-            being shown, hence send FETCH_STARTED message to show progress bar
-            while images are loaded from phone
+             * If the adapter is null, this is first time this activity's view is
+             * being shown, hence send FETCH_STARTED message to show progress bar
+             * while images are loaded from phone
              */
-            if (adapter == null) onFetchStarted();
+            if (adapter == null)
+                onFetchStarted();
 
             try {
                 File file;
@@ -298,24 +316,29 @@ public class ImageSelectActivity extends BaseEdgeToEdgeActivity implements OnFil
                         }
                     }
                 }
-                Cursor cursor = getContentResolver().query(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, projection,
-                        MediaStore.Images.Media.BUCKET_DISPLAY_NAME + " =?", new String[]{album}, MediaStore.Images.Media.DATE_ADDED);
+                Uri contentUri = Constants.mode == Constants.MODE_VIDEO ? MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+                        : MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
+                Cursor cursor = getContentResolver().query(contentUri, projection,
+                        MediaStore.MediaColumns.BUCKET_DISPLAY_NAME + " =?", new String[] { album },
+                        MediaStore.MediaColumns.DATE_ADDED);
                 if (cursor == null) {
                     onError();
                     return;
                 }
 
                 /*
-                In case this runnable is executed to onChange calling loadImages,
-                using countSelected variable can result in a race condition. To avoid that,
-                tempCountSelected keeps track of number of selected images. On handling
-                FETCH_COMPLETED message, countSelected is assigned value of tempCountSelected.
+                 * In case this runnable is executed to onChange calling loadImages,
+                 * using countSelected variable can result in a race condition. To avoid that,
+                 * tempCountSelected keeps track of number of selected images. On handling
+                 * FETCH_COMPLETED message, countSelected is assigned value of
+                 * tempCountSelected.
                  */
                 int tempCountSelected = 0;
                 ArrayList<Image> temp = new ArrayList<>(cursor.getCount());
                 if (cursor.moveToLast()) {
                     do {
-                        if (Thread.interrupted()) return;
+                        if (Thread.interrupted())
+                            return;
                         final int idIndex = cursor.getColumnIndex(projection[0]);
                         final int nameIndex = cursor.getColumnIndex(projection[1]);
                         final int pathIndex = cursor.getColumnIndex(projection[2]);
@@ -333,7 +356,8 @@ public class ImageSelectActivity extends BaseEdgeToEdgeActivity implements OnFil
                     } while (cursor.moveToPrevious());
                 }
                 cursor.close();
-                if (images == null) images = new ArrayList<>();
+                if (images == null)
+                    images = new ArrayList<>();
                 images.clear();
                 images.addAll(temp);
                 onFetchCompleted(tempCountSelected);
